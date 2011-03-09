@@ -10,15 +10,16 @@ so really the gists wont work unless you know for sure you wont get any with JS 
 ###Example Code
 
 >##Authentication
->    //authenticating as yourself, I'd recommend using something like Amplify to store the user credentials in localstorage
+>    authenticating as yourself, I'd recommend using something like Amplify to store the user credentials in localstorage
+>
 >    `amplify.store("username", "YourUserName");
 >    amplify.store("token", "yourincrediblylongandtotallyawesometoken");
 >    gh.authenticate(amplify.store("username"), amplify.store("password"));
 >    var user = gh.user(amplify.store("username"));`
     
 >##User Information
->  //this pulls data showing your user information from github
->   //puts your gravatar image inside a div
+>  this pulls data showing your user information from github puts your gravatar image inside a div
+>
 >   `user.show(function (data) {
 >        var data = data.user
 >        console.log(data);
@@ -26,7 +27,8 @@ so really the gists wont work unless you know for sure you wont get any with JS 
 >    });`
 
 >##Repository Information
->    //show a users repositories, iterates through them and then appends them to a div
+>    show a users repositories, iterates through them and then appends them to a div
+>
 >    `new repo.constructor.forUser(amplify.store("username"), RepoListCallback, data);`
 >    
 >    `function RepoListCallback(data){
@@ -39,7 +41,8 @@ so really the gists wont work unless you know for sure you wont get any with JS 
    
 
 >##Sending data
->    //grabbing data from a form and sending it to update a user
+>    grabbing data from a form and sending it to update a user
+>
 >    `var params = {
 >                "company" : $("#companyname").val(),
 >                "name"      : $("#name").val
