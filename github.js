@@ -43,10 +43,35 @@
 
         url += prefix + "callback=" + encodeURIComponent("gh.__jsonp_callbacks[" + id + "]");
         if (authUsername && authToken) {
-            url += "&login=" + authUsername + "&authToken=" + authToken;
+            url += "&login=" + authUsername + "&token=" + authToken;
         }
         script.setAttribute("src", apiRoot + url);
 
+        document.getElementsByTagName('head')[0].appendChild(script);
+    },
+    
+    jsonp2 = function (url, callback, context) {
+        apiRoot2 = 'https://gist.github.com/'
+        var id = +new Date,
+        script = document.createElement("script");
+
+        while (gh.__jsonp_callbacks[id] !== undefined)
+            id += Math.random(); // Avoid slight possibility of id clashes.
+
+        gh.__jsonp_callbacks[id] = function () {
+            delete gh.__jsonp_callbacks[id];
+            callback.apply(context, arguments);
+        };
+
+        var prefix = "?";
+        if (url.indexOf("?") >= 0)
+            prefix = "&";
+
+        url += prefix + "callback=" + encodeURIComponent("gh.__jsonp_callbacks[" + id + "]");
+       
+        script.setAttribute("src", apiRoot2 + url);
+        console.log('jsonp2');
+        console.log(script);
         document.getElementsByTagName('head')[0].appendChild(script);
     },
 
@@ -57,36 +82,70 @@
     // restrictions on ajax calls. Basically, a form is created that will POST
     // to the GitHub API URL, stuck inside an iframe so that it won't redirect
     // this page, and then submitted.
+    // THIS FUNCTION NOW DEPENDS ON jQuery
     post = function (url, vals) {
-        var
-        form = document.createElement("form"),
-        iframe = document.createElement("iframe"),
-        doc = iframe.contentDocument !== undefined ?
-            iframe.contentDocument :
-            iframe.contentWindow.document,
-        key, field;
-        vals = vals || {};
-
-        form.setAttribute("method", "post");
-        form.setAttribute("action", apiRoot + url);
-        for (key in vals) {
-            if (vals.hasOwnProperty(key)) {
-                field = document.createElement("input");
-                field.type = "hidden";
-                field.value = encodeURIComponent(vals[key]);
-                form.appendChild(field);
+        var key, field;
+        
+        var iframe = $('<iframe name="githubpull" style="display: none;">').appendTo($("body"));
+        var doc = null;
+        var values = "";
+        doc = window.frames["githubpull"].document;
+        
+        console.log(vals);
+        if(_.isArray(vals) || !_.isString(vals))
+        {
+            vals = vals || {};
+            for (key in vals) {
+                if (vals.hasOwnProperty(key)) {
+                    values += "&values[" + key + "]=" + vals[key]
+                }
             }
+        }else if(_.isString(vals)){
+            values = "&" + vals
         }
-
-        iframe.setAttribute("style", "display: none;");
+        var form = document.createElement("form");
+        form.method = "post";
+        form.action = apiRoot + url + "?login=" + authUsername + "&token=" + authToken + values;
+        
+        console.log(form);
         doc.body.appendChild(form);
-        document.body.appendChild(iframe);
+        form.submit();
+    },
+    
+    post2 = function (url, vals) {
+        var key, field;
+        
+        var iframe = $('<iframe name="githubpull" style="display: none;">').appendTo($("body"));
+        var doc = null;
+        var values = "";
+        doc = window.frames["githubpull"].document;
+        
+        console.log(vals);
+        if(_.isArray(vals) || !_.isString(vals))
+        {
+            vals = vals || {};
+            for (key in vals) {
+                if (vals.hasOwnProperty(key)) {
+                    values += "&" + key + "=" + vals[key]
+                }
+            }
+        }else if(_.isString(vals)){
+            values = "&" + vals
+        }
+        var form = document.createElement("form");
+        form.method = "post";
+        form.action = apiRoot + url + "?login=" + authUsername + "&token=" + authToken + values;
+        
+        console.log(form);
+        doc.body.appendChild(form);
         form.submit();
     },
 
     // This helper function will throw a TypeError if the library user is not
     // properly authenticated. Otherwise, it silently returns.
     authRequired = function (username) {
+        console.log("authUsername: " + authUsername);
+        console.log("authToken: " + authToken)
         if (!authUsername || !authToken || authUsername !== username) {
             throw new TypeError("gh: Must be authenticated to do that.");
         }
@@ -159,19 +218,61 @@
     //
     //     TODO: example
     gh.user.prototype.update = function (params) {
-        authRequired(this.username);
-        var key, postData = {
-            login: authUsername,
-            token: authToken
-        };
+        //authRequired(this.username);
+        var key, postData = {};
         for (key in params) {
             if (params.hasOwnProperty(key)) {
-                postData["values["+key+"]"] = encodeURIComponent(params[key]);
+                postData[key] = encodeURIComponent(params[key]);
             }
         }
         post("user/show/" + this.username, postData);
         return this;
     };
+    
+    gh.user.prototype.listKeys = function (callback, context) {
+        jsonp("user/keys", callback, context);
+        return this;
+    }
+    
+    // { "title" : "cheese", "key" : "alkj309jv309mz89eur0923m09cvj23=="
+    gh.user.prototype.addKey = function (params){
+        var key, postData = {};
+        for(key in params){
+            if(params.hasOwnProperty(key)){
+                postData[key] = encodeURIComponent(params[key]);
+            }
+        }
+        post("user/key/add" + postData);
+        return this;
+    }
+    
+    // { "id" : "987" }
+    gh.user.prototype.removeKey = function (params){
+        var key, postData = {};
+        for(key in params){
+            if(params.hasOwnProperty(key)){
+                postData[key] = encodeURIComponent(params[key]);
+            }
+        }
+        post("user/key/remove" + postData);
+        return this;
+    }
+    
+    // "email=test@test.com"
+    gh.user.prototype.addEmail = function (params){
+        post("user/email/add" + params);
+        return this;
+    }
+    
+    // "email=test@test.com"
+    gh.user.prototype.removeEmail = function (params){
+        post("user/email/remove" + params);
+        return this;
+    }
+    
+    gh.user.prototype.listEmail = function (callback, context){
+        jsonp("user/emails", callback, context);
+    }
 
     // Get a list of who this user is following.
     //
@@ -192,7 +293,7 @@
     //
     //     TODO: example
     gh.user.prototype.follow = function (user) {
-        authRequired.call(this);
+        //authRequired.call(this.username);
         post("user/follow/" + user);
         return this;
     };
@@ -202,7 +303,7 @@
     //
     //     TODO: example
     gh.user.prototype.unfollow = function (user) {
-        authRequired.call(this);
+        //authRequired.call(this);
         post("user/unfollow/" + user);
         return this;
     };
@@ -240,7 +341,7 @@
     // they are just a collaborator on, and do not own). Must be authenticated
     // as this user.
     gh.user.prototype.pushable = function (callback, context) {
-        authRequired(authUsername);
+        //authRequired(authUsername);
         jsonp("repos/pushable", callback, context);
     };
 
@@ -250,7 +351,7 @@
             jsonp(this.username, callback, context);
             return this;
         }
-    );
+        );
 
     // Search users for `query`.
     gh.user.search = function (query, callback, context) {
@@ -307,32 +408,32 @@
     // Get all tags for this repo.
     gh.repo.prototype.tags = function (callback, context) {
         jsonp("repos/show/" + this.user + "/" + this.repo + "/tags",
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
     // Get all branches in this repo.
     gh.repo.prototype.branches = function (callback, context) {
         jsonp("repos/show/" + this.user + "/" + this.repo + "/branches",
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
     // Gather line count information on the language(s) used in this repo.
     gh.repo.prototype.languages = function (callback, context) {
         jsonp("/repos/show/" + this.user + "/" + this.repo + "/languages",
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
     // Gather data on all the forks of this repo.
     gh.repo.prototype.network = function (callback, context) {
         jsonp("repos/show/" + this.user + "/" + this.repo + "/network",
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
@@ -343,16 +444,16 @@
         if (showAnon)
             url += "/anon";
         jsonp(url,
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
     // Get all of the collaborators for this repo.
     gh.repo.prototype.collaborators = function (callback, context) {
         jsonp("repos/show/" + this.user + "/" + this.repo + "/collaborators",
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
@@ -383,17 +484,18 @@
         post("repo/set/public/" + this.repo);
         return this;
     };
-
+    
     // Search for repositories. `opts` may include `start_page` or `language`,
     // which must be capitalized.
     gh.repo.search = function (query, opts, callback, context) {
-        var url = "repos/search/" + query.replace(" ", "+");
+         var url = "repos/search/" + query.replace(" ", "+");
         if (typeof opts === "function") {
             opts = {};
             callback = arguments[1];
             context = arguments[2];
         }
         url += "?" + paramify(opts);
+        jsonp(url, callback, context);
         return this;
     };
 
@@ -430,24 +532,24 @@
 
     gh.commit.prototype.show = function (callback, context) {
         jsonp("commits/show/" + this.user + "/" + this.repo + "/" + this.sha,
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
     // Get a list of all commits on a repos branch.
     gh.commit.forBranch = function (user, repo, branch, callback, context) {
         jsonp("commits/list/" + user + "/" + repo + "/" + branch,
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
     // Get a list of all commits on this path (file or dir).
     gh.commit.forPath = function (user, repo, branch, path, callback, context) {
         jsonp("commits/list/" + user + "/" + repo + "/" + branch + "/" + path,
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
@@ -464,16 +566,16 @@
     // View this issue's info.
     gh.issue.prototype.show = function (callback, context) {
         jsonp("issues/show/" + this.user + "/" + this.repo + "/" + this.number,
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
     // Get a list of all comments on this issue.
     gh.issue.prototype.comments = function (callback, context) {
         jsonp("issues/comments/" + this.user + "/" + this.repo + "/" + this.number,
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
@@ -517,24 +619,27 @@
     // Comment on this issue as the user that is authenticated.
     gh.issue.prototype.comment = function (comment) {
         authRequired(authUsername);
-        post("/issues/comment/" + user + "/" + repo + "/" + this.number, {
+        post2("issues/comment/" + this.user + "/" + this.repo + "/" + this.number, {
             comment: comment
         });
         return this;
     };
 
     // Get all issues' labels for the repo.
-    gh.issue.labels = function (user, repo) {
+    gh.issue.prototype.labels = function (user, repo, callback, context) {
         jsonp("issues/labels/" + user + "/" + repo,
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
     // Open an issue. Must be authenticated.
     gh.issue.open = function (repo, title, body) {
+        console.log(repo);
+        console.log(title);
+        console.log(body);
         authRequired(authUsername);
-        post("issues/open/" + authUsername + "/" + repo, {
+        post2("issues/open/" + authUsername + "/" + repo, {
             title: title,
             body: body
         });
@@ -544,8 +649,8 @@
     // Search a repository's issue tracker. `state` can be "open" or "closed".
     gh.issue.search = function (user, repo, state, query, callback, context) {
         jsonp("/issues/search/" + user + "/" + repo + "/" + state + "/" + query,
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
@@ -553,8 +658,8 @@
     // "closed".
     gh.issue.list = function (user, repo, state, callback, context) {
         jsonp("issues/list/" + user + "/" + repo + "/" + state,
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
@@ -567,21 +672,15 @@
         this.id = id;
     };
 
-    gh.gist.prototype.show = withTempApiRoot(
-        "http://gist.github.com/api/v1/json/",
-        function (callback, context) {
-            jsonp(this.id, callback, cont);
+    gh.gist.prototype.show = function (callback, context) {
+            jsonp2("api/v1/json/" + this.id, callback, context);
             return this;
-        }
-    );
+        };
 
-    gh.gist.prototype.file = withTempApiRoot(
-        "http://gist.github.com/raw/v1/json/",
-        function (filename, callback, context) {
-            jsonp(this.id + "/" + filename, callback, cont);
+    gh.gist.prototype.file = function (filename, callback, context) {
+            jsonp2("raw/" + this.id + "/" + filename, callback, context);
             return this;
-        }
-    );
+        };
 
     // ### Objects
 
@@ -596,40 +695,40 @@
     // Get the contents of a tree by tree SHA
     gh.object.prototype.tree = function (sha, callback, context) {
         jsonp("tree/show/" + this.user + "/" + this.repo + "/" + sha,
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
     // Get the data about a blob by tree SHA and path
     gh.object.prototype.blob = function (path, sha, callback, context) {
         jsonp("blob/show/" + this.user + "/" + this.repo + "/" + sha + "/" + path,
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
     // Get only blob meta
     gh.object.prototype.blobMeta = function (path, sha, callback, context) {
         jsonp("blob/show/" + this.user + "/" + this.repo + "/" + sha + "/" + path + "?meta=1",
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
     // Get list of blobs
     gh.object.prototype.blobAll = function (branch, callback, context) {
         jsonp("blob/all/" + this.user + "/" + this.repo + "/" + branch,
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
     // Get meta of each blob in tree
     gh.object.prototype.blobFull = function (sha, callback, context) {
         jsonp("blob/full/" + this.user + "/" + this.repo + "/" + sha,
-              callback,
-              context);
+            callback,
+            context);
         return this;
     };
 
@@ -647,21 +746,21 @@
         "http://github.com/",
         function (nethash, start, end, callback, context) {
             jsonp(this.user + "/" + this.repo + "/network_data_chunk?"
-                  + nethash + "&" + start + "&" + end,
-                  callback,
-                  context);
+                + nethash + "&" + start + "&" + end,
+                callback,
+                context);
             return this;
         }
-    );
+        );
 
     gh.network.prototype.meta = withTempApiRoot(
         "http://github.com/",
         function (callback, context) {
             jsonp(this.user + "/" + this.repo + "/network_meta",
-                  callback,
-                  context);
+                callback,
+                context);
             return this;
         }
-    );
+        );
 
 }(window));
