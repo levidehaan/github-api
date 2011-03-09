@@ -3,7 +3,7 @@ Github API Js
 
 Exposes `gh` to the global environment. Tries to follow both the form of GithubHTTP API and JS style. 
 
-You cannot load javascript files in using this library yet, as it gets the data from github inside <script> tags.
+You cannot load javascript files in using this library yet, as it gets the data from github inside `<script>` tags.
 
 so really the gists wont work unless you know for sure you wont get any with JS in them, same with looking at repo code that has JS in it.
 
@@ -62,5 +62,5 @@ so really the gists wont work unless you know for sure you wont get any with JS 
 
 ###TODO
 ====
-* Make calls to github to pull repository files without using <script>
+* Make calls to github to pull repository files without using `<script>`
 * Documentation
