@@ -3,7 +3,7 @@ HTTP API and JS style.
 You cannot load javascript files in using this library yet, as it gets the data from github inside <script> tags.
 so really the gists wont work unless you know for sure you wont get any with JS in them, same with looking at repo code that has JS in it.
 
-    //authenticating as yourself, i'd recommend using something like Amplify to store the user credentials in localstorage
+    //authenticating as yourself, I'd recommend using something like Amplify to store the user credentials in localstorage
     amplify.store("username", "YourUserName");
     amplify.store("token", "yourincrediblylongandtotallyawesometoken");
     gh.authenticate(amplify.store("username"), amplify.store("password"));
