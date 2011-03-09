@@ -20,35 +20,37 @@ so really the gists wont work unless you know for sure you wont get any with JS 
 >##User Information
 >  this pulls data showing your user information from github puts your gravatar image inside a div
 >
->   `user.show(function (data) {
->        var data = data.user
->        console.log(data);
->        $('#somediv").html('<img src="http://gravatar.com/avatar/' + data.gravatar+id + '.jpg?s=80">');
->    });`
+>       user.show(function (data) {
+>            var data = data.user
+>            console.log(data);
+>            $('#somediv").html('<img src="http://gravatar.com/avatar/' + data.gravatar+id + '.jpg?s=80">');
+>        });
 
 >##Repository Information
 >    show a users repositories, iterates through them and then appends them to a div
 >
->    `new repo.constructor.forUser(amplify.store("username"), RepoListCallback, data);`
+>        new repo.constructor.forUser(amplify.store("username"), RepoListCallback, data);`
 >    
->    `function RepoListCallback(data){
->        console.log(data);
->        if(data.repositories.length > 0) {
->           for(var r=0;r<data.repositories.length; r++){
->               $('<h1>' + data.repositories[r].name + '</h1>').appendTo('#somediv');
->         }
->     }`
+>        function RepoListCallback(data){
+>            console.log(data);
+>             if(data.repositories.length > 0) {
+>                   for(var r=0;r<data.repositories.length; r++){
+>                       $('<h1>' + data.repositories[r].name + '</h1>').appendTo('#somediv');
+>                   }
+>              }
    
 
 >##Sending data
 >    grabbing data from a form and sending it to update a user
 >
->    `var params = {
+>        var params = {
 >                "company" : $("#companyname").val(),
 >                "name"      : $("#name").val
->     }`
+>         }
 >
->     `gh.user(user).update(params);`   //There is no callback available for sending data
+>         gh.user(user).update(params);
+>
+>   There is no callback available for sending data
 
    
 ###COMPLETE
