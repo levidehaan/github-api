@@ -12,10 +12,10 @@ so really the gists wont work unless you know for sure you wont get any with JS 
 >##Authentication
 >    authenticating as yourself, I'd recommend using something like Amplify to store the user credentials in localstorage
 >
->    `amplify.store("username", "YourUserName");
->    amplify.store("token", "yourincrediblylongandtotallyawesometoken");
->    gh.authenticate(amplify.store("username"), amplify.store("password"));
->    var user = gh.user(amplify.store("username"));`
+>        amplify.store("username", "YourUserName");
+>        amplify.store("token", "yourincrediblylongandtotallyawesometoken");
+>        gh.authenticate(amplify.store("username"), amplify.store("password"));
+>        var user = gh.user(amplify.store("username"));`
     
 >##User Information
 >  this pulls data showing your user information from github puts your gravatar image inside a div
