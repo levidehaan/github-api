@@ -2,6 +2,12 @@
 //
 // Tries to map one-to-one with the GitHub API V2, but in a Javascripty manner.
 
+if (typeof window.console === "undefined" ) {
+    window.console = {
+        log: $.noop
+    };
+};
+
 (function (globals) {
 
     // Before we implement the API methods, we will define all of our private
@@ -19,79 +25,38 @@
     // Send a JSONP request to the Github API that calls `callback` with
     // the `context` argument as `this`.
     //
-    // The `url` parameter is concatenated with the apiRoot, for the reasons
-    // mentioned above. The way that we are supporting non-global, anonymous
-    // functions is by sticking them in the globally exposed
-    // `gh.__jsonp_callbacks` object with a "unique" `id` that is the current
-    // time in milliseconds. Once the callback is called, it is deleted from the
-    // object to prevent memory leaks.
     jsonp = function (url, callback, context) {
-        var id = +new Date,
-        script = document.createElement("script");
-
-        while (gh.__jsonp_callbacks[id] !== undefined)
-            id += Math.random(); // Avoid slight possibility of id clashes.
-
-        gh.__jsonp_callbacks[id] = function () {
-            delete gh.__jsonp_callbacks[id];
-            callback.apply(context, arguments);
-        };
-
-        var prefix = "?";
-        if (url.indexOf("?") >= 0)
-            prefix = "&";
-
-        url += prefix + "callback=" + encodeURIComponent("gh.__jsonp_callbacks[" + id + "]");
+        var data = {};
+        
         if (authUsername && authToken) {
-            url += "&login=" + authUsername + "&token=" + authToken;
+            data.login = authUsername;
+            data.token = authToken;
         }
-        script.setAttribute("src", apiRoot + url);
-
-        document.getElementsByTagName('head')[0].appendChild(script);
+        
+        $.getJSON( apiRoot + url, data, function () {
+            callback.apply(context, arguments);
+        });
     },
     
     jsonp2 = function (url, callback, context) {
-        apiRoot2 = 'https://gist.github.com/'
-        var id = +new Date,
-        script = document.createElement("script");
-
-        while (gh.__jsonp_callbacks[id] !== undefined)
-            id += Math.random(); // Avoid slight possibility of id clashes.
-
-        gh.__jsonp_callbacks[id] = function () {
-            delete gh.__jsonp_callbacks[id];
+        var data = {};
+        
+        if (authUsername && authToken) {
+            data.login = authUsername;
+            data.token = authToken;
+        }
+        
+        $.getJSON( apiRoot + url, data, function () {
             callback.apply(context, arguments);
-        };
-
-        var prefix = "?";
-        if (url.indexOf("?") >= 0)
-            prefix = "&";
-
-        url += prefix + "callback=" + encodeURIComponent("gh.__jsonp_callbacks[" + id + "]");
-       
-        script.setAttribute("src", apiRoot2 + url);
-        console.log('jsonp2');
-        console.log(script);
-        document.getElementsByTagName('head')[0].appendChild(script);
+        }, "text");
     },
 
     // Send an HTTP POST. Unfortunately, it isn't possible to support a callback
     // with the resulting data. (Please prove me wrong if you can!)
     //
-    // This is implemented with a hack to get around the cross-domain
-    // restrictions on ajax calls. Basically, a form is created that will POST
-    // to the GitHub API URL, stuck inside an iframe so that it won't redirect
-    // this page, and then submitted.
-    // THIS FUNCTION NOW DEPENDS ON jQuery
     post = function (url, vals) {
-        var key, field;
+        var key, values;
         
-        var iframe = $('<iframe name="githubpull" style="display: none;">').appendTo($("body"));
-        var doc = null;
-        var values = "";
-        doc = window.frames["githubpull"].document;
-        
-        console.log(vals);
         if(_.isArray(vals) || !_.isString(vals))
         {
             vals = vals || {};
@@ -103,49 +68,30 @@
         }else if(_.isString(vals)){
             values = "&" + vals
         }
-        var form = document.createElement("form");
-        form.method = "post";
-        form.action = apiRoot + url + "?login=" + authUsername + "&token=" + authToken + values;
         
-        console.log(form);
-        doc.body.appendChild(form);
-        form.submit();
+        $.post(apiRoot + url + "?login=" + authUsername + "&token=" + authToken + values);
     },
     
     post2 = function (url, vals) {
-        var key, field;
+        var key, values;
         
-        var iframe = $('<iframe name="githubpull" style="display: none;">').appendTo($("body"));
-        var doc = null;
-        var values = "";
-        doc = window.frames["githubpull"].document;
-        
-        console.log(vals);
-        if(_.isArray(vals) || !_.isString(vals))
-        {
+        if (_.isArray(vals) || !_.isString(vals)) {
             vals = vals || {};
             for (key in vals) {
                 if (vals.hasOwnProperty(key)) {
-                    values += "&" + key + "=" + vals[key]
+                    values += "&" + key + "=" + vals[key];
                 }
             }
-        }else if(_.isString(vals)){
-            values = "&" + vals
+        } else if (_.isString(vals)) {
+            values = "&" + vals;
         }
-        var form = document.createElement("form");
-        form.method = "post";
-        form.action = apiRoot + url + "?login=" + authUsername + "&token=" + authToken + values;
         
-        console.log(form);
-        doc.body.appendChild(form);
-        form.submit();
+        $.post(apiRoot + url + "?login=" + authUsername + "&token=" + authToken + values);
     },
 
     // This helper function will throw a TypeError if the library user is not
     // properly authenticated. Otherwise, it silently returns.
     authRequired = function (username) {
-        console.log("authUsername: " + authUsername);
-        console.log("authToken: " + authToken)
         if (!authUsername || !authToken || authUsername !== username) {
             throw new TypeError("gh: Must be authenticated to do that.");
         }
@@ -218,14 +164,7 @@
     //
     //     TODO: example
     gh.user.prototype.update = function (params) {
-        //authRequired(this.username);
-        var key, postData = {};
-        for (key in params) {
-            if (params.hasOwnProperty(key)) {
-                postData[key] = encodeURIComponent(params[key]);
-            }
-        }
-        post("user/show/" + this.username, postData);
+        post("user/show/" + this.username, params);
         return this;
     };
     
@@ -234,6 +173,7 @@
         return this;
     }
     
+    // TODO, this looks broken
     // { "title" : "cheese", "key" : "alkj309jv309mz89eur0923m09cvj23=="
     gh.user.prototype.addKey = function (params){
         var key, postData = {};
@@ -246,6 +186,7 @@
         return this;
     }
     
+    // Todo, also looks broken
     // { "id" : "987" }
     gh.user.prototype.removeKey = function (params){
         var key, postData = {};
@@ -488,7 +429,7 @@
     // Search for repositories. `opts` may include `start_page` or `language`,
     // which must be capitalized.
     gh.repo.search = function (query, opts, callback, context) {
-         var url = "repos/search/" + query.replace(" ", "+");
+        var url = "repos/search/" + query.replace(" ", "+");
         if (typeof opts === "function") {
             opts = {};
             callback = arguments[1];
@@ -618,7 +559,6 @@
 
     // Comment on this issue as the user that is authenticated.
     gh.issue.prototype.comment = function (comment) {
-        authRequired(authUsername);
         post2("issues/comment/" + this.user + "/" + this.repo + "/" + this.number, {
             comment: comment
         });
@@ -673,14 +613,14 @@
     };
 
     gh.gist.prototype.show = function (callback, context) {
-            jsonp2("api/v1/json/" + this.id, callback, context);
-            return this;
-        };
+        jsonp2("api/v1/json/" + this.id, callback, context);
+        return this;
+    };
 
     gh.gist.prototype.file = function (filename, callback, context) {
-            jsonp2("raw/" + this.id + "/" + filename, callback, context);
-            return this;
-        };
+        jsonp2("raw/" + this.id + "/" + filename, callback, context);
+        return this;
+    };
 
     // ### Objects
 
