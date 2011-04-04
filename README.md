@@ -1,5 +1,7 @@
 Github API Js
 ===============
+This file has been modified and only works in environments that allow crossdomain scripting such as the BlackBerry Playbook with the WebWorks SDK.
+You must also use jQuery to use this library.
 
 Exposes `gh` to the global environment. Tries to follow both the form of GithubHTTP API and JS style. 
 
